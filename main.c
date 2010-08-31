@@ -22,26 +22,30 @@ int main(int argc, char **argv) {
   int port;
   char *filename;
   bool check = false;
+  bool binary = false;
+  int i;
   
   if (argc < 3) {
-    printf("mc-loader <server>:<port> <filename> [check]\n");
+    printf("mc-loader <server>:<port> <keyset> [check] [binary]\n");
     exit (1);
-  }
-
-  if (argc > 3) {
-    check = true;
   }
 
   parse_host(argv[1], &hostname, &port);
   filename = strdup(argv[2]);
 
-  /*
-  printf("host: %s\n", hostname);
-  printf("port: %d\n", port);
-  printf("file: %s\n", filename);
-  */
+  for (i=3; i < argc ; i++) {
+    if (strncmp("check",argv[i],6) == 0) {
+      check = true;
+    }
+    else if (strncmp("binary",argv[i],7) == 0) {
+      binary = true;
+    }
+  }
 
   memcached_st *memc = memcached_create(NULL);
+  if (binary) {
+    memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_BINARY_PROTOCOL, 1);
+  }
   memcached_server_add(memc, hostname, port);
 
   char *buffer = malloc(sizeof(char) * 64);
@@ -74,7 +78,7 @@ int main(int argc, char **argv) {
     size = strlen(data);
 
     if (check == false) {
-      memcached_set(memc, key, nkey, data, size, 0, 0);
+      rc = memcached_set(memc, key, nkey, data, size, 0, 0);
       if (rc != MEMCACHED_SUCCESS) {
 	rval = 1;
 	printf("Failed to set: %s\n", key);
