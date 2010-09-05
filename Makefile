@@ -1,8 +1,8 @@
 all: main.c
-	gcc -o mc-loader main.c -Wl,-rpath,/usr/local/lib -lmemcached
+	gcc -o mc-loader main.c -Wl,-rpath,/usr/local/lib -lmemcached -lsasl2
 
 debug: main.c
-	gcc -o mc-loader main.c -Wl,-rpath,/usr/local/lib -lmemcached -O0 -gfull
+	gcc -o mc-loader main.c -Wl,-rpath,/usr/local/lib -lmemcached -lsasl2 -O0 -gfull
 
 clean:
 	rm -f mc-loader
