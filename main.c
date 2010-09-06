@@ -98,8 +98,18 @@ int main(int argc, char **argv) {
   memcached_return_t rc;
   bool pass;
   int rval = 0;
+  FILE *file;
 
-  FILE *file = fopen(filename, "r");
+  if (strcmp(filename,"-") == 0) {
+    file = stdin;
+  } else {
+    file = fopen(filename, "r");
+  }
+
+  if (file == NULL) {
+    fprintf(stderr, "Failed to open file %s\n", filename);
+    exit(1);
+  }
   while (fgets(buffer,63,file) != NULL) {
     key = buffer;
     ptr = strchr(key, ' ');
