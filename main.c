@@ -2,6 +2,10 @@
 #include <string.h>
 #include <libmemcached/memcached.h>
 
+/*
+  convert hostname:port to char*:int
+  if port is not specified then it defaults to 11211
+*/
 static int parse_host(char *hostport, char **hostname, int *port) {
   char *ptr;
   *hostname = strdup(hostport);
@@ -16,6 +20,10 @@ static int parse_host(char *hostport, char **hostname, int *port) {
   return 0;
 }
 
+/*
+  convert username:password to char*:char*
+  if password is not specified it defaults to ""
+*/
 static int parse_auth(char *auth, char **username, char **password) {
   char *ptr;
   *username = strdup(auth);
@@ -41,7 +49,22 @@ int main(int argc, char **argv) {
   char *sasl_username;
   char *sasl_password;
   int i;
+  memcached_t *memc;
+  char *buffer = malloc(sizeof(char) * 64);
+  char *key = NULL;
+  size_t nkey = 0;
+  char *data = NULL;
+  size_t size = 0;
+  char *rdata = NULL;
+  size_t rsize = 0;
+  char *ptr = NULL;
+  uint32_t flags;
+  memcached_return_t rc;
+  bool pass;
+  int rval = 0;
+  FILE *file;
   
+  /* parse out arguments */
   if (argc < 3) {
     printf("mc-loader <server>:<port> <keyset> [check] [binary] [sasl username:password]\n");
     exit (1);
@@ -69,7 +92,8 @@ int main(int argc, char **argv) {
     }
   }
 
-  memcached_st *memc = memcached_create(NULL);
+  /* connect to the memcached server */
+  memc = memcached_create(NULL);
   if (binary) {
     memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_BINARY_PROTOCOL, 1);
   }
@@ -86,30 +110,17 @@ int main(int argc, char **argv) {
   }
   memcached_server_add(memc, hostname, port);
 
-  char *buffer = malloc(sizeof(char) * 64);
-  char *key = NULL;
-  size_t nkey = 0;
-  char *data = NULL;
-  size_t size = 0;
-  char *rdata = NULL;
-  size_t rsize = 0;
-  char *ptr = NULL;
-  uint32_t flags;
-  memcached_return_t rc;
-  bool pass;
-  int rval = 0;
-  FILE *file;
-
   if (strcmp(filename,"-") == 0) {
     file = stdin;
   } else {
     file = fopen(filename, "r");
   }
-
   if (file == NULL) {
     fprintf(stderr, "Failed to open file %s\n", filename);
     exit(1);
   }
+
+  /* read in keys and either set or get */
   while (fgets(buffer,63,file) != NULL) {
     key = buffer;
     ptr = strchr(key, ' ');
@@ -129,7 +140,7 @@ int main(int argc, char **argv) {
       rc = memcached_set(memc, key, nkey, data, size, 0, 0);
       if (rc != MEMCACHED_SUCCESS) {
 	rval = 1;
-	printf("Failed to set: %s\n", key);
+	fprintf(stderr, "Failed to set: %s\n", key);
       }
     } else {
       rdata = memcached_get(memc, key, nkey, &rsize, &flags, &rc);
@@ -143,7 +154,7 @@ int main(int argc, char **argv) {
       }
       if (pass == false) {
 	rval = 1;
-	printf("Failed to get: %s\n", key);
+	fprintf(stderr, "Failed to get: %s\n", key);
       }
     }
   }
