@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   char *sasl_username;
   char *sasl_password;
   int i;
-  memcached_t *memc;
+  memcached_st *memc;
   char *buffer = malloc(sizeof(char) * 64);
   char *key = NULL;
   size_t nkey = 0;
