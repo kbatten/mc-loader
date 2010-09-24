@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
   FILE *file;
   char *fixed_data = NULL;
   int fixed_datasize = 0;
+  int backoff_us = 0;
   
   /* parse out arguments */
   if (argc < 3) {
@@ -160,11 +161,30 @@ int main(int argc, char **argv) {
     size = strlen(data);
 
     if (check == false) {
-      rc = memcached_set(memc, key, nkey, data, size, 0, 0);
+      /* if we fail to set, backoff then try again up to a 10 second backoff */
+      do {
+	rc = memcached_set(memc, key, nkey, data, size, 0, 0);
+	if (rc != MEMCACHED_SUCCESS) {
+	  backoff_us += 10000;
+	  /*
+	  fprintf(stderr, "backing off %s, %d us\n", key, backoff_us);
+	  */
+	  usleep(backoff_us);
+	}
+      } while ((rc != MEMCACHED_SUCCESS) && (backoff_us < 10000000));
       if (rc != MEMCACHED_SUCCESS) {
 	rval = 1;
 	fprintf(stderr, "Failed to set: %s\n", key);
       }
+      backoff_us -= 1000;
+      if (backoff_us < 0) {
+	backoff_us = 0;
+      }
+      /*
+      if (backoff_us > 0) {
+	fprintf(stderr, "backoff: %d us\n", backoff_us);
+      }
+      */
     } else {
       rdata = memcached_get(memc, key, nkey, &rsize, &flags, &rc);
       pass = true;
