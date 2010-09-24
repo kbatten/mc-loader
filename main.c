@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
   char *sasl_username;
   char *sasl_password;
   int i;
+  int j;
   memcached_st *memc;
   char *buffer = malloc(sizeof(char) * 64);
   char *key = NULL;
@@ -63,10 +64,12 @@ int main(int argc, char **argv) {
   bool pass;
   int rval = 0;
   FILE *file;
+  char *fixed_data = NULL;
+  int fixed_datasize = 0;
   
   /* parse out arguments */
   if (argc < 3) {
-    printf("mc-loader <server>:<port> <keyset> [check] [binary] [sasl username:password]\n");
+    printf("mc-loader <server>:<port> <keyset> [check] [binary] [valuesize size] [sasl username:password]\n");
     exit (1);
   }
 
@@ -79,6 +82,23 @@ int main(int argc, char **argv) {
     }
     else if (strncmp("binary", argv[i], 7) == 0) {
       binary = true;
+    }
+    else if (strncmp("valuesize", argv[i], 9) == 0) {
+      if (argc < (i+2)) {
+	fprintf(stderr, "Missing value size\n");
+	exit(1);
+      }
+      /* right now just fill the data with 'a', in the future
+	 create a random (but predictable) set of data based
+	 on the key and data specified in the file
+      */
+      fixed_datasize = atoi(argv[i+1]);
+      fixed_data = malloc(fixed_datasize+1);
+      for (j=0;j<fixed_datasize;j++) {
+	fixed_data[j]='a';
+      }
+      fixed_data[fixed_datasize] = 0;
+      i = i + 1;
     }
     else if (strncmp("sasl", argv[i], 4) == 0) {
       if (argc < (i+2)) {
@@ -132,6 +152,9 @@ int main(int argc, char **argv) {
     ptr = strchr(data, '\n');
     if (ptr != NULL) {
       *ptr = '\0';
+    }
+    if (fixed_data != NULL) {
+      data = fixed_data;
     }
     nkey = strlen(key);
     size = strlen(data);
