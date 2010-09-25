@@ -86,25 +86,25 @@ int main(int argc, char **argv) {
     }
     else if (strncmp("valuesize", argv[i], 9) == 0) {
       if (argc < (i+2)) {
-	fprintf(stderr, "Missing value size\n");
-	exit(1);
+        fprintf(stderr, "Missing value size\n");
+        exit(1);
       }
       /* right now just fill the data with 'a', in the future
-	 create a random (but predictable) set of data based
-	 on the key and data specified in the file
+         create a random (but predictable) set of data based
+         on the key and data specified in the file
       */
       fixed_datasize = atoi(argv[i+1]);
       fixed_data = malloc(fixed_datasize+1);
       for (j=0;j<fixed_datasize;j++) {
-	fixed_data[j]='a';
+        fixed_data[j]='a';
       }
       fixed_data[fixed_datasize] = 0;
       i = i + 1;
     }
     else if (strncmp("sasl", argv[i], 4) == 0) {
       if (argc < (i+2)) {
-	fprintf(stderr, "Missing SASL username:password\n");
-	exit(1);
+        fprintf(stderr, "Missing SASL username:password\n");
+        exit(1);
       }
       sasl = true;
       binary = true;
@@ -163,41 +163,41 @@ int main(int argc, char **argv) {
     if (check == false) {
       /* if we fail to set, backoff then try again up to a 10 second backoff */
       do {
-	rc = memcached_set(memc, key, nkey, data, size, 0, 0);
-	if (rc != MEMCACHED_SUCCESS) {
-	  backoff_us += 10000;
-	  /*
-	  fprintf(stderr, "backing off %s, %d us\n", key, backoff_us);
-	  */
-	  usleep(backoff_us);
-	}
+        rc = memcached_set(memc, key, nkey, data, size, 0, 0);
+        if (rc != MEMCACHED_SUCCESS) {
+          backoff_us += 10000;
+          /*
+            fprintf(stderr, "backing off %s, %d us\n", key, backoff_us);
+          */
+          usleep(backoff_us);
+        }
       } while ((rc != MEMCACHED_SUCCESS) && (backoff_us < 10000000));
       if (rc != MEMCACHED_SUCCESS) {
-	rval = 1;
-	fprintf(stderr, "Failed to set: %s\n", key);
+        rval = 1;
+        fprintf(stderr, "Failed to set: %s\n", key);
       }
-      backoff_us -= 1000;
+      backoff_us -= 10000;
       if (backoff_us < 0) {
-	backoff_us = 0;
+        backoff_us = 0;
       }
       /*
-      if (backoff_us > 0) {
-	fprintf(stderr, "backoff: %d us\n", backoff_us);
-      }
+        if (backoff_us > 0) {
+        fprintf(stderr, "backoff: %d us\n", backoff_us);
+        }
       */
     } else {
       rdata = memcached_get(memc, key, nkey, &rsize, &flags, &rc);
       pass = true;
       if (rc != MEMCACHED_SUCCESS) {
-	pass = false;
+        pass = false;
       } else if (rsize != size) {
-	pass = false;
+        pass = false;
       } else if (memcmp(data, rdata, size) != 0) {
-	pass = false;
+        pass = false;
       }
       if (pass == false) {
-	rval = 1;
-	fprintf(stderr, "Failed to get: %s\n", key);
+        rval = 1;
+        fprintf(stderr, "Failed to get: %s\n", key);
       }
     }
   }
