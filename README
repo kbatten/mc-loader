@@ -1,1 +1,3 @@
 SASL support requires libmemcached compiled with libsasl2 support
+
+http://github.com/kbatten/mc-loader
