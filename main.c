@@ -165,26 +165,25 @@ int main(int argc, char **argv) {
       do {
         rc = memcached_set(memc, key, nkey, data, size, 0, 0);
         if (rc != MEMCACHED_SUCCESS) {
-          backoff_us += 10000;
-          /*
-            fprintf(stderr, "backing off %s, %d us\n", key, backoff_us);
-          */
+          backoff_us += 10000 + (backoff_us/4);
+          if (backoff_us > 3000000) {
+            backoff_us = 3000000;
+          }
+          fprintf(stderr, "backing off %s, %d us\n", key, backoff_us);
           usleep(backoff_us);
         }
-      } while ((rc != MEMCACHED_SUCCESS) && (backoff_us < 10000000));
+      } while ((rc != MEMCACHED_SUCCESS) && (backoff_us < 3000000));
       if (rc != MEMCACHED_SUCCESS) {
         rval = 1;
         fprintf(stderr, "Failed to set: %s\n", key);
       }
-      backoff_us -= 10000;
+      backoff_us -= (10000 + (backoff_us/4));
       if (backoff_us < 0) {
         backoff_us = 0;
       }
-      /*
-        if (backoff_us > 0) {
+      if (backoff_us > 0) {
         fprintf(stderr, "backoff: %d us\n", backoff_us);
-        }
-      */
+      }
     } else {
       rdata = memcached_get(memc, key, nkey, &rsize, &flags, &rc);
       pass = true;
