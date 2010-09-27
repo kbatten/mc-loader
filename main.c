@@ -67,6 +67,8 @@ int main(int argc, char **argv) {
   char *fixed_data = NULL;
   int fixed_datasize = 0;
   int backoff_us = 0;
+  int fails = 0;
+  int passes = 0;
 
   /* parse out arguments */
   if (argc < 3) {
@@ -177,7 +179,10 @@ int main(int argc, char **argv) {
       } while ((rc != MEMCACHED_SUCCESS) && (backoff_us < 4000000));
       if (rc != MEMCACHED_SUCCESS) {
         rval = 1;
+        fails ++;
         fprintf(stderr, "Failed to set: %s\n", key);
+      } else {
+        passes ++;
       }
       backoff_us -= (10000 + (backoff_us/20));
       if (backoff_us < 0) {
@@ -200,7 +205,10 @@ int main(int argc, char **argv) {
       }
       if (pass == false) {
         rval = 1;
+        fails ++;
         fprintf(stderr, "Failed to get: %s\n", key);
+      } else {
+        passes ++;
       }
     }
   }
@@ -208,6 +216,9 @@ int main(int argc, char **argv) {
   if (sasl) {
     memcached_destroy_sasl_auth_data(memc);
   }
+
+  printf("pass: %d\n",passes);
+  printf("fail: %d\n",fails);
 
   return rval;
 }
