@@ -210,6 +210,7 @@ int main(int argc, char **argv) {
       } else {
         passes ++;
       }
+      free(rdata);
     }
   }
 
