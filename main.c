@@ -2,6 +2,13 @@
 #include <string.h>
 #include <libmemcached/memcached.h>
 
+typedef enum {
+  MCLOADER_SUCCESS = 0,
+  MCLOADER_MCFAIL  = 1,
+  MCLOADER_SIZEDIF = 2,
+  MCLOADER_DATADIF = 3,
+} MCLOADER_ERROR_CODE;
+
 /*
   convert hostname:port to char*:int
   if port is not specified then it defaults to 11211
@@ -70,6 +77,7 @@ int main(int argc, char **argv) {
   int fails = 0;
   int passes = 0;
   int oom_error_code = 10;
+  int err_reason = MCLOADER_SUCCESS;
 
   /* parse out arguments */
   if (argc < 3) {
@@ -198,18 +206,34 @@ int main(int argc, char **argv) {
 #endif
     } else {
       rdata = memcached_get(memc, key, nkey, &rsize, &flags, &rc);
+      err_reason = MCLOADER_SUCCESS;
       pass = true;
       if (rc != MEMCACHED_SUCCESS) {
         pass = false;
+        err_reason = MCLOADER_MCFAIL;
       } else if (rsize != size) {
         pass = false;
+        err_reason = MCLOADER_SIZEDIF;
       } else if (memcmp(data, rdata, size) != 0) {
         pass = false;
+        err_reason = MCLOADER_DATADIF;
       }
       if (pass == false) {
         rval = 1;
         fails ++;
-        fprintf(stderr, "Failed to get: %s\n", key);
+        switch (err_reason) {
+        case MCLOADER_MCFAIL:
+          fprintf(stderr, "Failed to get: %s, memcached failure %d\n", key, rc);
+          break;
+        case MCLOADER_SIZEDIF:
+            fprintf(stderr, "Failed to get: %s, data size difference. expected %lu, got %lu\n", key, size, rsize);
+          break;
+        case MCLOADER_DATADIF:
+          fprintf(stderr, "Failed to get: %s, data value difference\n", key);
+          break;
+        default:
+          fprintf(stderr, "Failed to get: %s, mcloader failure %d\n", key, err_reason);
+        }
       } else {
         passes ++;
       }
