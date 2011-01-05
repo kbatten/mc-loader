@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
   int backoff_us = 0;
   int fails = 0;
   int passes = 0;
+  int oom_error_code = 10;
 
   /* parse out arguments */
   if (argc < 3) {
@@ -85,6 +86,7 @@ int main(int argc, char **argv) {
     }
     else if (strncmp("binary", argv[i], 7) == 0) {
       binary = true;
+      oom_error_code = 8;
     }
     else if (strncmp("valuesize", argv[i], 9) == 0) {
       if (argc < (i+2)) {
@@ -166,7 +168,8 @@ int main(int argc, char **argv) {
       /* if we fail to set, backoff then try again up to a 10 second backoff */
       do {
         rc = memcached_set(memc, key, nkey, data, size, 0, 0);
-        if (rc != MEMCACHED_SUCCESS) {
+        /* only backoff on temp mem errors */
+        if (rc == oom_error_code) {
           backoff_us += 10000 + (backoff_us/20);
           if (backoff_us > 4000000) {
             backoff_us = 4000000;
@@ -176,11 +179,11 @@ int main(int argc, char **argv) {
 #endif
           usleep(backoff_us);
         }
-      } while ((rc != MEMCACHED_SUCCESS) && (backoff_us < 4000000));
+      } while ((rc == oom_error_code) && (backoff_us < 4000000));
       if (rc != MEMCACHED_SUCCESS) {
         rval = 1;
         fails ++;
-        fprintf(stderr, "Failed to set: %s\n", key);
+        fprintf(stderr, "Failed to set: %s, due to error: %d\n", key, rc);
       } else {
         passes ++;
       }
